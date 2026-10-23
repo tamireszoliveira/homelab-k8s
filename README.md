@@ -5,7 +5,7 @@ Mini cluster Kubernetes de homelab, com GitOps e gerenciamento web via Rancher.
 ## Arquitetura
 
 ```
-Seu PC                              AWS (t3a.medium, liga/desliga sob demanda)
+ PC                              AWS (t3a.medium, liga/desliga sob demanda)
 ┌─────────────────────────┐         ┌─────────────────────────┐
 │ cluster kind             │         │ Rancher (Docker)         │
 │  └─ Argo CD              │         │  └─ importa o cluster    │
