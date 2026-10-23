@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Padrão "app of apps": a root app (clusters/homelab/root-app.yaml) aponta
+# para este diretório, e cada arquivo aqui declara uma Application do Argo CD.
+# Adicionar um workload ao cluster = adicionar um arquivo aqui num PR.
+namespace: argocd
+
+resources:
+  # Infraestrutura (sync wave negativa: entra antes dos apps)
+  - ingress-nginx.yaml
+  - metrics-server.yaml
+  # Workloads
+  - podinfo.yaml
+  - hello-homelab.yaml

@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-homelab
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: hello.homelab.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-homelab
+                port:
+                  number: 80

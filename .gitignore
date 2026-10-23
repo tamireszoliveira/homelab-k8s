@@ -1,0 +1,15 @@
+# Terraform
+infra-aws/.terraform/
+infra-aws/.terraform.lock.hcl
+infra-aws/terraform.tfstate
+infra-aws/terraform.tfstate.backup
+infra-aws/*.tfplan
+infra-aws/rancher_ssh_key.pem
+infra-aws/terraform.tfvars
+
+# Credenciais do cluster, nunca devem ir pro git
+kubeconfig*
+*.kubeconfig
+
+# kind
+kind/kubeconfig

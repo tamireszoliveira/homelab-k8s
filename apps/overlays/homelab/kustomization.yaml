@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Overlay do cluster "homelab". Se um dia você tiver um segundo ambiente
+# (ex: "staging"), duplica esta pasta e ajusta o que precisar aqui —
+# a base em apps/base/hello-homelab não muda.
+namespace: demo
+
+resources:
+  - ../../base/hello-homelab

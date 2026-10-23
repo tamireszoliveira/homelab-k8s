@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+# Executa só no primeiro boot (comportamento padrão do cloud-init user_data).
+# Nos boots seguintes (depois de stop/start), é o `--restart unless-stopped`
+# do Docker que religa o container sozinho — sem precisar reexecutar nada.
+
+apt-get update -y
+apt-get install -y ca-certificates curl
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+systemctl enable --now docker
+
+# Dados do Rancher (etcd embutido, configs, certs) vivem no disco raiz da
+# instância — sobrevivem a stop/start (só não sobrevivem a terminate).
+mkdir -p /var/lib/rancher /var/log/rancher/auditlog
+
+# Sem --acme-domain: como o hostname (sslip.io) muda a cada restart por não
+# usarmos Elastic IP, automatizar Let's Encrypt exigiria reemitir certificado
+# a cada boot. Fica com certificado autoassinado — você aceita o aviso do
+# navegador uma vez (o cert é reaproveitado entre restarts, fica salvo em
+# /var/lib/rancher).
+docker run -d \
+  --name rancher \
+  --restart unless-stopped \
+  --privileged \
+  -p 443:443 \
+  -p 80:80 \
+  -v /var/lib/rancher:/var/lib/rancher \
+  -v /var/log/rancher/auditlog:/var/log/auditlog \
+  -e CATTLE_BOOTSTRAP_PASSWORD="${bootstrap_password}" \
+  rancher/rancher:${rancher_version}

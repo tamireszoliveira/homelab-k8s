@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+              truthy:
+                check-keys: false
+
+      - name: Instalar kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar -xz kubeconform
+          sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
+
+      # kubectl já traz kustomize embutido nos runners do GitHub.
+      - name: Build + validar manifests (kustomize)
+        run: |
+          set -euo pipefail
+          for dir in clusters/homelab/bootstrap clusters/homelab/apps apps/overlays/homelab; do
+            echo "== kustomize build ${dir} =="
+            kubectl kustomize "${dir}" > /tmp/build.yaml
+            # -ignore-missing-schemas: CRDs como a Application do Argo CD
+            # não têm schema público no catálogo padrão do kubeconform.
+            kubeconform -strict -ignore-missing-schemas \
+              -kubernetes-version 1.35.0 \
+              /tmp/build.yaml
+          done
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Validar Terraform (fmt + validate)
+        run: |
+          cd infra-aws
+          terraform init -backend=false
+          terraform fmt -check -recursive
+          terraform validate

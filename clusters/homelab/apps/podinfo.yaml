@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: podinfo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # App de demonstração do ecossistema GitOps (mantido pelo mantenedor do
+    # Flux CD). É o caminho "Helm" de exemplo — dependência externa ao repo.
+    # Para remover do cluster: apague este arquivo e a linha correspondente
+    # em clusters/homelab/apps/kustomization.yaml.
+    repoURL: https://stefanprodan.github.io/podinfo
+    chart: podinfo
+    targetRevision: 6.15.0
+    helm:
+      values: |
+        replicaCount: 1
+        ingress:
+          enabled: true
+          className: nginx
+          hosts:
+            - host: podinfo.homelab.local
+              paths:
+                - path: /
+                  pathType: Prefix
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

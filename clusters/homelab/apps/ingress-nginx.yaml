@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-nginx
+  namespace: argocd
+  annotations:
+    # Wave negativa: o ingress controller precisa existir antes dos apps
+    # que criam Ingress, senão os webhooks de admission falham.
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: default
+  source:
+    # Repositório oficial do subprojeto ingress-nginx (org Kubernetes).
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: 4.15.1
+    helm:
+      values: |
+        controller:
+          # Em kind não há LoadBalancer de verdade. Expomos o controller via
+          # hostPort no nó rotulado ingress-ready, que o kind mapeia para
+          # localhost:8080/8443 (ver kind/cluster.yaml extraPortMappings).
+          hostPort:
+            enabled: true
+            ports:
+              http: 80
+              https: 443
+          service:
+            type: NodePort
+          nodeSelector:
+            ingress-ready: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Equal
+              effect: NoSchedule
+          # Uma réplica só: é um mini cluster, não há HA a defender.
+          replicaCount: 1
+          # O Job de admission-webhook com patch é desnecessário aqui e
+          # costuma travar a primeira sync em clusters pequenos.
+          admissionWebhooks:
+            enabled: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-nginx
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # O CRD/ValidatingWebhook do chart é grande; evita erro de annotation.
+      - ServerSideApply=true

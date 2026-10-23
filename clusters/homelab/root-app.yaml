@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    # Garante que deletar a root app faça cascata nas apps filhas,
+    # em vez de deixar órfãos no cluster.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tamireszoliveira/homelab-k8s
+    targetRevision: main
+    path: clusters/homelab/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      # Remove do cluster o que for removido do git.
+      prune: true
+      # Reverte alterações feitas à mão com kubectl.
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

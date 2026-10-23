@@ -1,0 +1,34 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: homelab
+
+# Mini cluster: 1 control-plane + 1 worker.
+# Memória é o fator limitante neste host (~5.6Gi total), então ficamos em 2 nós.
+# Para adicionar mais workers, basta duplicar o bloco `- role: worker` abaixo.
+nodes:
+  - role: control-plane
+    # Rótulo exigido pelo ingress-nginx para agendar o controller neste nó
+    # (ver infra/ingress-nginx: nodeSelector ingress-ready=true).
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    # Portas altas no host para não exigir privilégio em 80/443 nem colidir
+    # com nada que já escute neles. http://localhost:8080 cai no Ingress.
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8443
+        protocol: TCP
+  - role: worker
+
+# O node image NÃO é pinado de propósito: cada release do kind traz a imagem
+# correspondente testada, e pinar uma versão incompatível com o binário local
+# quebra a criação do cluster. Para fixar, descomente em cada nó acima:
+#   image: kindest/node:v1.32.0@sha256:<digest>
+# e confira a tabela de imagens da sua release:
+#   https://github.com/kubernetes-sigs/kind/releases

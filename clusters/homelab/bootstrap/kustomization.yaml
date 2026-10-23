@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instalação do Argo CD. Esta é a ÚNICA coisa aplicada à mão no cluster
+# (via scripts/bootstrap.sh); tudo depois disso é sincronizado pelo próprio
+# Argo CD a partir deste repositório.
+namespace: argocd
+
+resources:
+  - namespace.yaml
+  # Manifest oficial do projeto Argo CD, com a tag pinada.
+  # Para atualizar: troque a tag aqui e abra um PR — o CI valida o build.
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml
+
+patches:
+  # Argo CD assume TLS próprio por padrão; num homelab acessado por
+  # port-forward isso só gera aviso de certificado. insecure=true deixa o
+  # servidor em HTTP puro e o acesso fica por port-forward/Ingress local.
+  - path: argocd-cmd-params-patch.yaml
+    target:
+      kind: ConfigMap
+      name: argocd-cmd-params-cm
